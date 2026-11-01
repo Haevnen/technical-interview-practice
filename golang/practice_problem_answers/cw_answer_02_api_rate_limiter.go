@@ -67,7 +67,7 @@ type Plan struct {
 type APIKey struct {
 	ID         string
 	Owner      string
-	Plan       string    // must be a key in Gateway.Plans
+	Plan       string // must be a key in Gateway.Plans
 	Enabled    bool
 	RequestLog []float64 // sorted Unix timestamps of recent requests
 }
@@ -106,7 +106,17 @@ var DefaultPlans = map[string]*Plan{
 // MakeGateway returns a fresh Gateway state.
 // If plans is nil, DefaultPlans is used.
 func MakeGateway(plans map[string]*Plan) *Gateway {
-	panic("not implemented")
+	if plans == nil {
+		return &Gateway{
+			Plans: DefaultPlans,
+			Keys:  make(map[string]*APIKey),
+		}
+	}
+
+	return &Gateway{
+		Plans: plans,
+		Keys:  make(map[string]*APIKey),
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -117,14 +127,33 @@ func MakeGateway(plans map[string]*Plan) *Gateway {
 // Returns ErrAlreadyExists if keyID already exists.
 // Returns ErrInvalidPlan if plan is not in gw.Plans.
 func CreateKey(gw *Gateway, keyID, owner, plan string) (*APIKey, error) {
-	panic("not implemented")
+	if _, ok := gw.Plans[plan]; !ok {
+		return nil, ErrInvalidPlan
+	}
+
+	if _, ok := gw.Keys[keyID]; ok {
+		return nil, ErrAlreadyExists
+	}
+
+	gw.Keys[keyID] = &APIKey{
+		ID:      keyID,
+		Owner:   owner,
+		Plan:    plan,
+		Enabled: true,
+	}
+
+	return gw.Keys[keyID], nil
 }
 
 // RevokeKey sets key.Enabled = false.
 // Keys are disabled rather than deleted so historical logs are preserved.
 // Returns ErrNotFound if keyID is not found.
 func RevokeKey(gw *Gateway, keyID string) error {
-	panic("not implemented")
+	if key, ok := gw.Keys[keyID]; ok {
+		key.Enabled = false
+		return nil
+	}
+	return ErrNotFound
 }
 
 // UpdatePlan changes a key's plan.
@@ -132,7 +161,16 @@ func RevokeKey(gw *Gateway, keyID string) error {
 // Returns ErrNotFound if keyID is not found.
 // Returns ErrInvalidPlan if newPlan is not in gw.Plans.
 func UpdatePlan(gw *Gateway, keyID, newPlan string) error {
-	panic("not implemented")
+	if _, ok := gw.Plans[newPlan]; !ok {
+		return ErrInvalidPlan
+	}
+
+	if _, ok := gw.Keys[keyID]; !ok {
+		return ErrNotFound
+	}
+
+	gw.Keys[keyID].Plan = newPlan
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +181,15 @@ func UpdatePlan(gw *Gateway, keyID, newPlan string) error {
 // the half-open window (now - windowSeconds, now].
 // Helper — feel free to call this from IsAllowed and HandleRequest, or inline it.
 func countInWindow(requestLog []float64, now, windowSeconds float64) int {
-	panic("not implemented")
+	minTs := now - windowSeconds
+	cnt := 0
+	for i := len(requestLog) - 1; i >= 0; i-- {
+		if requestLog[i] <= minTs {
+			break
+		}
+		cnt += 1
+	}
+	return cnt
 }
 
 // IsAllowed returns true if the key is allowed to make a request at time now.
@@ -156,7 +202,19 @@ func countInWindow(requestLog []float64, now, windowSeconds float64) int {
 //
 // A nil limit means that dimension is unlimited.
 func IsAllowed(gw *Gateway, keyID string, now float64) bool {
-	panic("not implemented")
+	apiKey, ok := gw.Keys[keyID]
+	if !ok || !apiKey.Enabled {
+		return false
+	}
+
+	rpm, rpd := gw.Plans[apiKey.Plan].RPM, gw.Plans[apiKey.Plan].RPD
+
+	if (rpm == nil || countInWindow(apiKey.RequestLog, now, 60) < *rpm) &&
+		(rpd == nil || countInWindow(apiKey.RequestLog, now, 86400) < *rpd) {
+		return true
+	}
+
+	return false
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +226,18 @@ func IsAllowed(gw *Gateway, keyID string, now float64) bool {
 // Call this only AFTER confirming the request is allowed.
 // Returns ErrNotFound if keyID is not found.
 func RecordRequest(gw *Gateway, keyID string, now float64) error {
-	panic("not implemented")
+	if _, ok := gw.Keys[keyID]; !ok {
+		return ErrNotFound
+	}
+
+	for i := len(gw.Keys[keyID].RequestLog) - 1; i >= 0; i-- {
+		if gw.Keys[keyID].RequestLog[i] <= now-90000 {
+			gw.Keys[keyID].RequestLog = gw.Keys[keyID].RequestLog[i+1:]
+			break
+		}
+	}
+	gw.Keys[keyID].RequestLog = append(gw.Keys[keyID].RequestLog, now)
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -194,11 +263,66 @@ func RecordRequest(gw *Gateway, keyID string, now float64) error {
 //	"rpm_exceeded"  — per-minute cap reached
 //	"rpd_exceeded"  — per-day cap reached (only when rpm is within limit)
 func HandleRequest(gw *Gateway, keyID string, now float64) *RequestResult {
-	panic("not implemented")
+	key, ok := gw.Keys[keyID]
+	if !ok {
+		return &RequestResult{
+			Allowed: false,
+			KeyID:   keyID,
+			Reason:  "key_not_found",
+		}
+	}
+
+	if !key.Enabled {
+		return &RequestResult{
+			Allowed: false,
+			KeyID:   keyID,
+			Reason:  "key_disabled",
+		}
+	}
+
+	rpmPlan, rpdPlan := gw.Plans[key.Plan].RPM, gw.Plans[key.Plan].RPD
+	rpm, rpd := countInWindow(key.RequestLog, now, 60), countInWindow(key.RequestLog, now, 86400)
+
+	if rpmPlan != nil && rpm >= *rpmPlan {
+		return &RequestResult{
+			Allowed: false,
+			KeyID:   keyID,
+			Reason:  "rpm_exceeded",
+		}
+	}
+
+	if rpdPlan != nil && rpd >= *rpdPlan {
+		return &RequestResult{
+			Allowed: false,
+			KeyID:   keyID,
+			Reason:  "rpd_exceeded",
+		}
+	}
+
+	_ = RecordRequest(gw, keyID, now)
+	return &RequestResult{
+		Allowed: true,
+		KeyID:   keyID,
+	}
 }
 
 // GetUsage returns current usage stats for a key.
 // Returns ErrNotFound if keyID is not found.
 func GetUsage(gw *Gateway, keyID string, now float64) (*UsageStats, error) {
-	panic("not implemented")
+	key, ok := gw.Keys[keyID]
+	if !ok {
+		return nil, ErrNotFound
+	}
+
+	rpmPlan, rpdPlan := gw.Plans[key.Plan].RPM, gw.Plans[key.Plan].RPD
+	rpm, rpd := countInWindow(key.RequestLog, now, 60), countInWindow(key.RequestLog, now, 86400)
+
+	return &UsageStats{
+		KeyID:    keyID,
+		Plan:     key.Plan,
+		RPMUsed:  rpm,
+		RPMLimit: rpmPlan,
+		RPDUsed:  rpd,
+		RPDLimit: rpdPlan,
+	}, nil
 }

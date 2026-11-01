@@ -150,10 +150,10 @@ func TestUpdatePlan(t *testing.T) {
 
 func TestCountInWindow(t *testing.T) {
 	tests := []struct {
-		name    string
-		log     []float64
-		window  float64
-		want    int
+		name   string
+		log    []float64
+		window float64
+		want   int
 	}{
 		{"empty_log", []float64{}, 60, 0},
 		{"all_within_window", []float64{baseTime - 30, baseTime - 10, baseTime}, 60, 3},
@@ -397,8 +397,8 @@ func TestGetUsage(t *testing.T) {
 	t.Run("returns_correct_counts", func(t *testing.T) {
 		gw := gwWithKey(t)
 		gw.Keys["key_abc"].RequestLog = []float64{
-			baseTime - 30,   // within both minute and day windows
 			baseTime - 3600, // within day window only
+			baseTime - 30,   // within both minute and day windows
 		}
 		stats, err := GetUsage(gw, "key_abc", baseTime)
 		if err != nil {
