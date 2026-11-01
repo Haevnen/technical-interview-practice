@@ -174,12 +174,20 @@ func getTriggeredAlert(rule AlertRule, asset *Asset, newZoneID *string, timestam
 	return nil
 }
 
+func zoneChanged(oldZoneID, newZoneID *string) bool {
+	if oldZoneID == nil || newZoneID == nil {
+		return oldZoneID != newZoneID
+	}
+
+	return *oldZoneID != *newZoneID
+}
+
 func ProcessLocationUpdate(state *TrackerState, assetID string, lat, lng float64, timestamp string) ([]*TriggeredAlert, error) {
 	res := make([]*TriggeredAlert, 0)
 	if asset, ok := state.Assets[assetID]; ok {
 		asset.Lat, asset.Lng = &lat, &lng
 		newZoneID := GetCurrentZoneID(state, assetID)
-		if asset.ZoneID != newZoneID && ((asset.ZoneID == nil && newZoneID != nil) || (asset.ZoneID != nil && newZoneID == nil) || (*asset.ZoneID != *newZoneID)) {
+		if zoneChanged(asset.ZoneID, newZoneID) {
 			for _, rule := range state.AlertRules {
 				if alert := getTriggeredAlert(*rule, asset, newZoneID, timestamp); alert != nil {
 					res = append(res, alert)
