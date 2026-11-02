@@ -13,6 +13,7 @@ package rbac
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -223,6 +224,7 @@ func TestHasPermission(t *testing.T) {
 		pm.AssignRole("alice", "viewer")
 		pm.AssignRole("alice", "admin")
 		perms := pm.GetAllPermissions("alice")
+		fmt.Println(perms)
 		assertContains(t, perms, "billing:read")
 		assertContains(t, perms, "posts:read")
 	})
