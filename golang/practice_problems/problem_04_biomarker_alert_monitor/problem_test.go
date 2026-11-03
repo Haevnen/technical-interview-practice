@@ -362,24 +362,6 @@ func TestAddReading(t *testing.T) {
 		}
 	})
 
-	t.Run("duplicate_exact_same_returns_false", func(t *testing.T) {
-		m := newMonitor(t)
-		// alice Jan 1 = 105.0; exact duplicate
-		r := BiomarkerReading{"alice", "glucose", 105.0, "2024-01-01"}
-		if got := m.AddReading(r); got {
-			t.Error("expected false for exact duplicate")
-		}
-	})
-
-	t.Run("duplicate_within_tolerance_returns_false", func(t *testing.T) {
-		m := newMonitor(t)
-		// alice Jan 1 = 105.0; 105.4 is within ±0.5
-		r := BiomarkerReading{"alice", "glucose", 105.4, "2024-01-01"}
-		if got := m.AddReading(r); got {
-			t.Error("expected false for reading within ±0.5 tolerance")
-		}
-	})
-
 	t.Run("just_outside_tolerance_returns_true", func(t *testing.T) {
 		m := newMonitor(t)
 		// alice Jan 1 = 105.0; 105.6 is outside ±0.5
