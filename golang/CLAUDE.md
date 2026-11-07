@@ -108,6 +108,10 @@ Each problem uses a short, descriptive package name:
 | Problem 20 — Donor Communication Suppressor | `suppressor` |
 | Problem 21 — Platform Fee Calculator | `fees` |
 | Problem 22 — Giving Day Challenge Engine | `challenges` |
+| Problem 23 — Concurrent Job Worker Pool | `workerpool` |
+| Problem 24 — Streaming Data Pipeline | `pipeline` |
+| Problem 25 — Concurrent Pub/Sub Event Bus | `eventbus` |
+| Problem 26 — Request Context Propagation | `reqctx` |
 
 New problems should follow the same pattern. Avoid `main` and generic names like `solution`.
 

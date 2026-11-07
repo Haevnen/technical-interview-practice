@@ -576,5 +576,49 @@ const PROBLEMS = [
     tags: ["event-driven", "time-window", "challenge-tracking"],
     parts: 3,
     level: "senior"
+  },
+  {
+    path: "golang/practice_problems/problem_23_job_worker_pool/problem.go",
+    test: "golang/practice_problems/problem_23_job_worker_pool/problem_test.go",
+    title: "Concurrent Job Worker Pool",
+    description: "Build a goroutine worker pool with a bounded queue: blocking, non-blocking and context-aware submission, retries, panic recovery, and graceful shutdown with a deadline. Run tests with -race.",
+    language: "golang",
+    industry: "dev-tools",
+    tags: ["goroutines", "channels", "worker-pool", "backpressure", "context-cancellation", "graceful-shutdown", "panic-recovery", "retries", "sync"],
+    parts: 3,
+    level: "senior"
+  },
+  {
+    path: "golang/practice_problems/problem_24_stream_pipeline/problem.go",
+    test: "golang/practice_problems/problem_24_stream_pipeline/problem_test.go",
+    title: "Streaming Data Pipeline (Fan-Out / Fan-In)",
+    description: "Build channel-based pipeline stages: a generator, sequential and parallel map stages, a fan-in merge, and an ordered parallel processor with first-error-wins cancellation. Every goroutine must exit on context cancellation. Run tests with -race.",
+    language: "golang",
+    industry: "dev-tools",
+    tags: ["goroutines", "channels", "pipeline", "fan-out", "fan-in", "context-cancellation", "goroutine-leaks", "sync", "errgroup-pattern"],
+    parts: 3,
+    level: "senior"
+  },
+  {
+    path: "golang/practice_problems/problem_25_event_bus/problem.go",
+    test: "golang/practice_problems/problem_25_event_bus/problem_test.go",
+    title: "Concurrent Pub/Sub Event Bus",
+    description: "Build a topic-based event bus with per-subscriber buffered channels, block / drop-newest / drop-oldest slow-consumer policies, and panic-free unsubscribe and shutdown while publishers are blocked. Run tests with -race.",
+    language: "golang",
+    industry: "iot",
+    tags: ["goroutines", "channels", "pub-sub", "rwmutex", "backpressure", "slow-consumer", "deadlock-avoidance", "safe-channel-close", "sync"],
+    parts: 3,
+    level: "senior"
+  },
+  {
+    path: "golang/practice_problems/problem_26_request_context/problem.go",
+    test: "golang/practice_problems/problem_26_request_context/problem_test.go",
+    title: "Request Context Propagation",
+    description: "Build backend request-handling helpers around context.Context: typed request-scoped values, middleware, deadline budgets with cancellation causes, cancellable retry with backoff, first-success fan-out across replicas, and detached audit cleanup. Run tests with -race.",
+    language: "golang",
+    industry: "general",
+    tags: ["context", "context-values", "deadlines", "cancellation-cause", "middleware", "retry-backoff", "first-success", "detached-context", "saas", "api-platform"],
+    parts: 3,
+    level: "senior"
   }
 ];
